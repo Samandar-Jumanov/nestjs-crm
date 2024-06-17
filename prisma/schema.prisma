@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NONBINARY
+  UNKNOWN
+}
+
+enum NotificationEmail {
+  ACCOUNT
+  UPDATES
+  PROMOTIONS
+}
+
+enum PrefersColorScheme {
+  NO_PREFERENCE
+  LIGHT
+  DARK
+}
+
+enum UserRole {
+  SUDO
+  USER
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+  PARTIALLY
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PENDING
+}
+
+model User {
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  id                 Int                @id @default(autoincrement())
+  countryCode        String             @default("us")
+  name               String
+  password           String
+  email              String             @unique
+  prefersLanguage    String             @default("en-us")
+  profilePictureUrl  String             @default("https://unavatar.now.sh/fallback.png")
+  timezone           String             @default("America/Los_Angeles")
+  enabled            Boolean            @default(true)
+  prefersColorScheme PrefersColorScheme @default(NO_PREFERENCE)
+  notificationEmail  NotificationEmail  @default(ACCOUNT)
+  gender             Gender             @default(UNKNOWN)
+  role               UserRole           @default(USER)
+
+  // Relationships
+  invoices Invoice[]
+}
+
+model Invoice {
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  number      Int
+  year        Int
+  date        DateTime
+  expiredDate DateTime
+  taxRate     Int      @default(0)
+  subTotal    Int      @default(0)
+  total       Int      @default(0)
+  credit      Int      @default(0)
+  discount    Int      @default(0)
+  note        String?
+  pdfPath     String?
+  removed     Boolean  @default(false)
+
+  /// Enums
+  paymentStatus PaymentStatus @default(UNPAID)
+  status        InvoiceStatus @default(DRAFT)
+
+  // Relationships
+  items    InvoiceItem[]
+  payments Payment[]
+  User     User?         @relation(fields: [userId], references: [id])
+  userId   Int?
+}
+
+model InvoiceItem {
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  removed     Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  name        String
+  description String?
+  price       Int?
+
+  // Relationships
+  Invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+  invoiceId Int?
+}
+
+model Payment {
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  removed     Boolean  @default(false)
+  number      Int
+  date        DateTime @default(now())
+  ref         String?
+  description String?
+
+  // Relationships
+  Invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+  invoiceId Int?
+}
